@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Rendición de Gastos</title>
+    <style>
+        :root {
+            --color-background-primary: #ffffff;
+            --color-background-secondary: #f5f5f5;
+            --color-background-tertiary: #e8e8e8;
+            --color-background-info: #e6f1fb;
+            --color-background-danger: #fcebeb;
+            --color-background-success: #eaf3de;
+            --color-text-primary: #1a1a1a;
+            --color-text-secondary: #666666;
+            --color-text-tertiary: #999999;
+            --color-text-info: #185fa5;
+            --color-text-danger: #a32d2d;
+            --color-text-success: #3b6d11;
+            --color-border-primary: rgba(0,0,0,0.4);
+            --color-border-secondary: rgba(0,0,0,0.3);
+            --color-border-tertiary: rgba(0,0,0,0.15);
+            --border-radius-md: 8px;
+            --border-radius-lg: 12px;
+            --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-background-primary: #2a2a2a;
+                --color-background-secondary: #1f1f1f;
+                --color-background-tertiary: #151515;
+                --color-background-info: #0c447c;
+                --color-background-danger: #791f1f;
+                --color-background-success: #27500a;
+                --color-text-primary: #f0f0f0;
+                --color-text-secondary: #b0b0b0;
+                --color-text-tertiary: #808080;
+                --color-text-info: #85b7eb;
+                --color-text-danger: #f09595;
+                --color-text-success: #c0dd97;
+            }
+        }
+
+        * { box-sizing: border-box; }
+        body { 
+            margin: 0; 
+            font-family: var(--font-sans); 
+            background: var(--color-background-tertiary);
+            color: var(--color-text-primary);
+        }
+        input, select, textarea, button { 
+            font-family: inherit;
+            border: 0.5px solid var(--color-border-tertiary);
+            border-radius: 6px;
+            padding: 8px 12px;
+            background: var(--color-background-primary);
+            color: var(--color-text-primary);
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--color-border-secondary);
+        }
+
+        .container { max-width: 900px; margin: 0 auto; padding: 1.5rem; }
+        .header { margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; }
+        .header-left h1 { font-size: 22px; font-weight: 500; margin: 0 0 0.5rem 0; }
+        .header-left p { font-size: 14px; color: var(--color-text-secondary); margin: 0; }
+        .btn-back { background: transparent; color: var(--color-text-secondary); border: 0.5px solid var(--color-border-secondary); padding: 8px 16px; border-radius: var(--border-radius-md); font-size: 14px; cursor: pointer; }
+        .btn-back:hover { background: var(--color-background-secondary); }
+        .trip-badge { background: var(--color-background-info); color: var(--color-text-info); padding: 8px 16px; border-radius: var(--border-radius-md); font-size: 14px; font-weight: 500; margin-bottom: 1rem; display: inline-block; }
+        .trip-list { display: flex; flex-direction: column; gap: 12px; }
+        .trip-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1.25rem; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center; }
+        .trip-card:hover { border-color: var(--color-border-secondary); }
+        .trip-info h3 { font-size: 16px; font-weight: 500; margin: 0 0 4px 0; }
+        .trip-info p { font-size: 13px; color: var(--color-text-secondary); margin: 0; }
+        .trip-actions { display: flex; gap: 8px; }
+        .btn-download { background: var(--color-background-success); color: var(--color-text-success); border: none; padding: 8px 16px; border-radius: var(--border-radius-md); font-size: 13px; font-weight: 500; cursor: pointer; }
+        .btn-download:hover { opacity: 0.9; }
+        .btn-primary { background: var(--color-text-primary); color: var(--color-background-primary); border: none; padding: 10px 24px; border-radius: var(--border-radius-md); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; width: 100%; }
+        .btn-primary:hover { opacity: 0.9; transform: scale(0.98); }
+        .btn-secondary { background: transparent; color: var(--color-text-primary); border: 0.5px solid var(--color-border-secondary); padding: 10px 24px; border-radius: var(--border-radius-md); font-size: 14px; font-weight: 500; cursor: pointer; }
+        .btn-secondary:hover { background: var(--color-background-secondary); }
+        .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: var(--color-background-primary); border-radius: var(--border-radius-lg); padding: 2rem; max-width: 500px; width: 90%; }
+        .modal-content h2 { font-size: 18px; font-weight: 500; margin: 0 0 1.5rem 0; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+        .form-group label { font-size: 13px; font-weight: 500; }
+        .tabs { display: flex; gap: 8px; border-bottom: 0.5px solid var(--color-border-tertiary); margin-bottom: 1.5rem; }
+        .tab { padding: 8px 16px; background: none; border: none; cursor: pointer; font-size: 14px; color: var(--color-text-secondary); border-bottom: 2px solid transparent; }
+        .tab.active { color: var(--color-text-primary); font-weight: 500; border-bottom-color: var(--color-text-primary); }
+        .form-section { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1.5rem; margin-bottom: 1.5rem; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+        .form-row-3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+        .photo-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .photo-btn { border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); padding: 1.5rem 1rem; text-align: center; cursor: pointer; background: var(--color-background-secondary); }
+        .photo-btn:hover { border-color: var(--color-border-primary); background: var(--color-background-primary); }
+        .photo-btn input { display: none; }
+        .photo-btn-icon { font-size: 32px; margin-bottom: 8px; }
+        .photo-btn-text { font-size: 14px; font-weight: 500; margin: 0; }
+        .photo-btn-hint { font-size: 12px; color: var(--color-text-tertiary); margin: 4px 0 0 0; }
+        .file-preview { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--color-background-secondary); border-radius: var(--border-radius-md); margin-top: 12px; position: relative; }
+        .file-preview img { width: 80px; height: 80px; object-fit: cover; border-radius: 4px; }
+        .remove-photo { position: absolute; top: 8px; right: 8px; background: var(--color-background-danger); color: var(--color-text-danger); border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-size: 16px; }
+        .expense-list { display: flex; flex-direction: column; gap: 12px; }
+        .expense-item { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center; }
+        .expense-info { flex: 1; }
+        .expense-header { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; flex-wrap: wrap; }
+        .expense-amount { font-size: 18px; font-weight: 500; }
+        .expense-category { background: var(--color-background-info); color: var(--color-text-info); padding: 4px 10px; border-radius: var(--border-radius-md); font-size: 12px; font-weight: 500; }
+        .expense-currency { background: var(--color-background-secondary); color: var(--color-text-secondary); padding: 4px 8px; border-radius: var(--border-radius-md); font-size: 11px; font-weight: 500; }
+        .expense-details { font-size: 13px; color: var(--color-text-secondary); }
+        .expense-actions { display: flex; gap: 8px; }
+        .icon-btn { background: none; border: none; cursor: pointer; padding: 6px; border-radius: 4px; color: var(--color-text-secondary); font-size: 18px; }
+        .icon-btn:hover { background: var(--color-background-secondary); }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+        .stat-card { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 1rem; }
+        .stat-label { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 4px; }
+        .stat-value { font-size: 24px; font-weight: 500; }
+        .empty-state { text-align: center; padding: 3rem 1rem; color: var(--color-text-secondary); }
+        .export-section { display: flex; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .filters { display: flex; gap: 12px; flex-wrap: wrap; }
+        .filters select { width: auto; min-width: 150px; }
+
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            .form-row, .form-row-3 { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .header { flex-direction: column; align-items: flex-start; gap: 12px; }
+            .trip-card { flex-direction: column; align-items: flex-start; gap: 12px; }
+            .trip-actions { width: 100%; }
+            .btn-download { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="trip-list-view">
+            <div class="header">
+                <div class="header-left">
+                    <h1>Mis viajes</h1>
+                    <p>Selecciona un viaje para ver o cargar gastos</p>
+                </div>
+            </div>
+            
+            <button class="btn-primary" onclick="showNewTripModal()" style="margin-bottom: 1.5rem;">+ Nuevo viaje</button>
+            
+            <div id="trip-list" class="trip-list"></div>
+            
+            <div id="empty-trips" class="empty-state" style="display: none;">
+                <p style="font-size: 16px; margin: 0;">No hay viajes creados aún</p>
+                <p style="font-size: 14px; margin: 8px 0 0 0;">Crea tu primer viaje para comenzar</p>
+            </div>
+        </div>
+
+        <div id="trip-detail-view" style="display: none;">
+            <div class="header">
+                <div class="header-left">
+                    <h1>Rendición de gastos</h1>
+                    <p>Gestiona los gastos de tu viaje</p>
+                </div>
+                <button class="btn-back" onclick="backToTrips()">← Volver a viajes</button>
+            </div>
+
+            <div class="trip-badge" id="trip-badge">📍 Viaje actual</div>
+
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('nuevo')">Nuevo gasto</button>
+                <button class="tab" onclick="switchTab('lista')">Lista de gastos</button>
+                <button class="tab" onclick="switchTab('reportes')">Reportes</button>
+            </div>
+
+            <div id="tab-nuevo">
+                <div class="form-section">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Fecha del gasto</label>
+                            <input type="date" id="fecha">
+                        </div>
+                        <div class="form-group">
+                            <label>Categoría</label>
+                            <select id="categoria">
+                                <option value="">Selecciona una categoría</option>
+                                <option value="Transporte">Transporte</option>
+                                <option value="Alojamiento">Alojamiento</option>
+                                <option value="Comidas">Comidas</option>
+                                <option value="Combustible">Combustible</option>
+                                <option value="Otros">Otros</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row-3">
+                        <div class="form-group">
+                            <label>Monto</label>
+                            <input type="number" id="monto" placeholder="0.00" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label>Moneda</label>
+                            <select id="moneda">
+                                <option value="ARS">ARS</option>
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                                <option value="BRL">BRL</option>
+                                <option value="CLP">CLP</option>
+                                <option value="UYU">UYU</option>
+                                <option value="MXN">MXN</option>
+                                <option value="COP">COP</option>
+                                <option value="PEN">PEN</option>
+                                <option value="GBP">GBP</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tipo de cambio</label>
+                            <input type="number" id="tipoCambio" placeholder="Opcional" step="0.01">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Descripción</label>
+                        <input type="text" id="descripcion" placeholder="Detalles del gasto...">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Comprobante</label>
+                        <div class="photo-options">
+                            <div class="photo-btn" onclick="document.getElementById('camera-input').click()">
+                                <input type="file" id="camera-input" accept="image/*" capture="environment" onchange="handleFileSelect(event)">
+                                <div class="photo-btn-icon">📷</div>
+                                <p class="photo-btn-text">Tomar foto</p>
+                                <p class="photo-btn-hint">Usar cámara</p>
+                            </div>
+                            <div class="photo-btn" onclick="document.getElementById('file-input').click()">
+                                <input type="file" id="file-input" accept="image/*" onchange="handleFileSelect(event)">
+                                <div class="photo-btn-icon">🖼️</div>
+                                <p class="photo-btn-text">Subir foto</p>
+                                <p class="photo-btn-hint">Desde galería</p>
+                            </div>
+                        </div>
+                        <div id="file-preview" style="display: none;"></div>
+                    </div>
+
+                    <div style="display: flex; gap: 12px; margin-top: 1.5rem;">
+                        <button class="btn-primary" onclick="guardarGasto()">Guardar gasto</button>
+                        <button class="btn-secondary" onclick="limpiarFormulario()">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-lista" style="display: none;">
+                <div class="export-section">
+                    <div class="filters">
+                        <select id="filter-categoria" onchange="filtrarGastos()">
+                            <option value="">Todas las categorías</option>
+                            <option value="Transporte">Transporte</option>
+                            <option value="Alojamiento">Alojamiento</option>
+                            <option value="Comidas">Comidas</option>
+                            <option value="Combustible">Combustible</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                        <select id="filter-moneda" onchange="filtrarGastos()">
+                            <option value="">Todas las monedas</option>
+                            <option value="ARS">ARS</option>
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                        </select>
+                    </div>
+                    <button class="btn-download" onclick="exportarZIP()">Descargar ZIP (CSV + Fotos)</button>
+                </div>
+
+                <div id="expense-list" class="expense-list"></div>
+            </div>
+
+            <div id="tab-reportes" style="display: none;">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Gastos registrados</div>
+                        <div class="stat-value" id="stat-count">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Monedas utilizadas</div>
+                        <div class="stat-value" id="stat-currencies">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Con comprobante</div>
+                        <div class="stat-value" id="stat-photos">0</div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 style="font-size: 16px; font-weight: 500; margin: 0 0 1rem 0;">Totales por moneda</h3>
+                    <div id="currency-breakdown"></div>
+                </div>
+
+                <div class="form-section">
+                    <h3 style="font-size: 16px; font-weight: 500; margin: 0 0 1rem 0;">Por categoría</h3>
+                    <div id="category-breakdown"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="new-trip-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Nuevo viaje</h2>
+            <div class="form-group">
+                <label>Nombre del viaje</label>
+                <input type="text" id="trip-name" placeholder="Ej: Buenos Aires - Octubre 2024">
+            </div>
+            <div class="form-group">
+                <label>Fecha de inicio</label>
+                <input type="date" id="trip-start">
+            </div>
+            <div class="form-group">
+                <label>Fecha de fin</label>
+                <input type="date" id="trip-end">
+            </div>
+            <div style="display: flex; gap: 12px; margin-top: 1.5rem;">
+                <button class="btn-primary" onclick="createTrip()">Crear viaje</button>
+                <button class="btn-secondary" onclick="hideNewTripModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <script>
+        let trips = JSON.parse(localStorage.getItem('trips') || '[]');
+        let expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
+        let currentTripId = null;
+        let currentFile = null;
+
+        function renderTripList() {
+            const container = document.getElementById('trip-list');
+            const emptyState = document.getElementById('empty-trips');
+            
+            if (trips.length === 0) {
+                container.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            container.innerHTML = trips.map(trip => {
+                const tripExpenses = expenses.filter(e => e.tripId === trip.id);
+                const total = tripExpenses.length;
+                const withPhotos = tripExpenses.filter(e => e.archivoData).length;
+                return `
+                    <div class="trip-card" onclick="selectTrip(${trip.id})">
+                        <div class="trip-info">
+                            <h3>${trip.name}</h3>
+                            <p>${new Date(trip.startDate).toLocaleDateString('es-ES')} - ${new Date(trip.endDate).toLocaleDateString('es-ES')} • ${total} gastos • ${withPhotos} fotos</p>
+                        </div>
+                        <div class="trip-actions">
+                            <button class="btn-download" onclick="event.stopPropagation(); downloadTripZIP(${trip.id})">Descargar ZIP</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function showNewTripModal() {
+            document.getElementById('new-trip-modal').style.display = 'flex';
+        }
+
+        function hideNewTripModal() {
+            document.getElementById('new-trip-modal').style.display = 'none';
+            document.getElementById('trip-name').value = '';
+            document.getElementById('trip-start').value = '';
+            document.getElementById('trip-end').value = '';
+        }
+
+        function createTrip() {
+            const name = document.getElementById('trip-name').value;
+            const startDate = document.getElementById('trip-start').value;
+            const endDate = document.getElementById('trip-end').value;
+            
+            if (!name || !startDate || !endDate) {
+                alert('Por favor completa todos los campos');
+                return;
+            }
+            
+            const trip = {
+                id: Date.now(),
+                name,
+                startDate,
+                endDate
+            };
+            
+            trips.push(trip);
+            localStorage.setItem('trips', JSON.stringify(trips));
+            hideNewTripModal();
+            renderTripList();
+        }
+
+        function selectTrip(tripId) {
+            currentTripId = tripId;
+            const trip = trips.find(t => t.id === tripId);
+            
+            document.getElementById('trip-badge').textContent = `📍 ${trip.name}`;
+            
+            document.getElementById('trip-list-view').style.display = 'none';
+            document.getElementById('trip-detail-view').style.display = 'block';
+            
+            switchTab('nuevo');
+            renderExpenses();
+        }
+
+        function backToTrips() {
+            currentTripId = null;
+            document.getElementById('trip-list-view').style.display = 'block';
+            document.getElementById('trip-detail-view').style.display = 'none';
+            renderTripList();
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            document.getElementById('tab-nuevo').style.display = tab === 'nuevo' ? 'block' : 'none';
+            document.getElementById('tab-lista').style.display = tab === 'lista' ? 'block' : 'none';
+            document.getElementById('tab-reportes').style.display = tab === 'reportes' ? 'block' : 'none';
+            
+            if (tab === 'lista') {
+                renderExpenses();
+            } else if (tab === 'reportes') {
+                renderReports();
+            }
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                currentFile = file;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('file-preview');
+                    preview.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview">
+                        <div style="flex: 1;">
+                            <p style="margin: 0; font-size: 14px; font-weight: 500;">${file.name}</p>
+                            <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--color-text-secondary);">${(file.size / 1024).toFixed(1)} KB</p>
+                        </div>
+                        <button class="remove-photo" onclick="removePhoto()">×</button>
+                    `;
+                    preview.style.display = 'flex';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removePhoto() {
+            currentFile = null;
+            document.getElementById('file-preview').style.display = 'none';
+            document.getElementById('camera-input').value = '';
+            document.getElementById('file-input').value = '';
+        }
+
+        function guardarGasto() {
+            const fecha = document.getElementById('fecha').value;
+            const categoria = document.getElementById('categoria').value;
+            const monto = parseFloat(document.getElementById('monto').value);
+            const moneda = document.getElementById('moneda').value;
+            const descripcion = document.getElementById('descripcion').value;
+            const tipoCambio = parseFloat(document.getElementById('tipoCambio').value) || null;
+            
+            if (!fecha || !categoria || !monto || !moneda) {
+                alert('Por favor completa todos los campos obligatorios');
+                return;
+            }
+            
+            const expense = {
+                id: Date.now(),
+                tripId: currentTripId,
+                fecha,
+                categoria,
+                monto,
+                moneda,
+                tipoCambio,
+                descripcion,
+                archivo: currentFile ? currentFile.name : null,
+                archivoData: currentFile ? document.querySelector('#file-preview img')?.src : null
+            };
+            
+            expenses.push(expense);
+            localStorage.setItem('expenses', JSON.stringify(expenses));
+            
+            limpiarFormulario();
+            alert('Gasto guardado exitosamente');
+        }
+
+        function limpiarFormulario() {
+            document.getElementById('fecha').value = '';
+            document.getElementById('categoria').value = '';
+            document.getElementById('monto').value = '';
+            document.getElementById('moneda').value = 'ARS';
+            document.getElementById('tipoCambio').value = '';
+            document.getElementById('descripcion').value = '';
+            document.getElementById('camera-input').value = '';
+            document.getElementById('file-input').value = '';
+            document.getElementById('file-preview').style.display = 'none';
+            currentFile = null;
+            document.getElementById('fecha').valueAsDate = new Date();
+        }
+
+        function getCurrentTripExpenses() {
+            return expenses.filter(e => e.tripId === currentTripId);
+        }
+
+        function renderExpenses() {
+            const container = document.getElementById('expense-list');
+            const filterCategoria = document.getElementById('filter-categoria').value;
+            const filterMoneda = document.getElementById('filter-moneda').value;
+            
+            let filtered = getCurrentTripExpenses();
+            if (filterCategoria) filtered = filtered.filter(e => e.categoria === filterCategoria);
+            if (filterMoneda) filtered = filtered.filter(e => e.moneda === filterMoneda);
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No hay gastos registrados</p></div>';
+                return;
+            }
+            
+            container.innerHTML = filtered.map(expense => `
+                <div class="expense-item">
+                    <div class="expense-info">
+                        <div class="expense-header">
+                            <span class="expense-amount">${expense.moneda} ${expense.monto.toFixed(2)}</span>
+                            <span class="expense-category">${expense.categoria}</span>
+                            ${expense.tipoCambio ? `<span class="expense-currency">TC: ${expense.tipoCambio}</span>` : ''}
+                        </div>
+                        <div class="expense-details">
+                            ${new Date(expense.fecha).toLocaleDateString('es-ES')} • ${expense.descripcion || 'Sin descripción'}
+                        </div>
+                    </div>
+                    <div class="expense-actions">
+                        ${expense.archivoData ? `<button class="icon-btn" onclick="verArchivo(${expense.id})">📎</button>` : ''}
+                        <button class="icon-btn" onclick="eliminarGasto(${expense.id})">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filtrarGastos() {
+            renderExpenses();
+        }
+
+        function eliminarGasto(id) {
+            if (confirm('¿Estás seguro de eliminar este gasto?')) {
+                expenses = expenses.filter(e => e.id !== id);
+                localStorage.setItem('expenses', JSON.stringify(expenses));
+                renderExpenses();
+                renderTripList();
+            }
+        }
+
+        function verArchivo(id) {
+            const expense = expenses.find(e => e.id === id);
+            if (expense && expense.archivoData) {
+                window.open(expense.archivoData);
+            }
+        }
+
+        function renderReports() {
+            const tripExpenses = getCurrentTripExpenses();
+            const count = tripExpenses.length;
+            const currencies = [...new Set(tripExpenses.map(e => e.moneda))];
+            const withPhotos = tripExpenses.filter(e => e.archivoData).length;
+            
+            document.getElementById('stat-count').textContent = count;
+            document.getElementById('stat-currencies').textContent = currencies.length;
+            document.getElementById('stat-photos').textContent = withPhotos;
+            
+            const byCurrency = {};
+            const byCategory = {};
+            
+            tripExpenses.forEach(e => {
+                byCurrency[e.moneda] = (byCurrency[e.moneda] || 0) + e.monto;
+                byCategory[`${e.categoria} (${e.moneda})`] = (byCategory[`${e.categoria} (${e.moneda})`] || 0) + e.monto;
+            });
+            
+            document.getElementById('currency-breakdown').innerHTML = Object.entries(byCurrency)
+                .map(([currency, amount]) => `
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 0.5px solid var(--color-border-tertiary);">
+                        <span style="font-size: 14px; font-weight: 500;">${currency}</span>
+                        <span style="font-size: 14px; font-weight: 500;">${amount.toFixed(2)}</span>
+                    </div>
+                `).join('') || '<p style="font-size: 14px; color: var(--color-text-secondary);">No hay datos</p>';
+            
+            document.getElementById('category-breakdown').innerHTML = Object.entries(byCategory)
+                .map(([cat, amount]) => `
+                    <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 0.5px solid var(--color-border-tertiary);">
+                        <span style="font-size: 14px;">${cat}</span>
+                        <span style="font-size: 14px; font-weight: 500;">${amount.toFixed(2)}</span>
+                    </div>
+                `).join('') || '<p style="font-size: 14px; color: var(--color-text-secondary);">No hay datos</p>';
+        }
+
+        function exportarZIP() {
+            downloadTripZIP(currentTripId);
+        }
+
+        async function downloadTripZIP(tripId) {
+            const tripExpenses = expenses.filter(e => e.tripId === tripId);
+            if (tripExpenses.length === 0) {
+                alert('Este viaje no tiene gastos registrados');
+                return;
+            }
+            
+            const trip = trips.find(t => t.id === tripId);
+            const zip = new JSZip();
+            
+            const headers = ['Viaje', 'Fecha', 'Categoría', 'Monto', 'Moneda', 'Tipo de Cambio', 'Descripción', 'Nombre Archivo'];
+            const rows = tripExpenses.map((e, index) => [
+                trip.name,
+                e.fecha,
+                e.categoria,
+                e.monto,
+                e.moneda,
+                e.tipoCambio || '',
+                e.descripcion || '',
+                e.archivoData ? `recibo_${index + 1}.jpg` : ''
+            ]);
+            
+            let csv = headers.join(',') + '\n';
+            rows.forEach(row => {
+                csv += row.map(field => `"${field}"`).join(',') + '\n';
+            });
+            
+            zip.file('gastos.csv', csv);
+            
+            const photosFolder = zip.folder('recibos');
+            tripExpenses.forEach((expense, index) => {
+                if (expense.archivoData) {
+                    const base64Data = expense.archivoData.split(',')[1];
+                    photosFolder.file(`recibo_${index + 1}.jpg`, base64Data, {base64: true});
+                }
+            });
+            
+            const content = await zip.generateAsync({type: 'blob'});
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = `${trip.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.zip`;
+            link.click();
+        }
+
+        document.getElementById('fecha').valueAsDate = new Date();
+        renderTripList();
+    </script>
+</body>
+</html>
