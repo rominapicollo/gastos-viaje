@@ -808,4 +808,59 @@
                         <span style="font-size: 14px;">${cat}</span>
                         <span style="font-size: 14px; font-weight: 500;">${amount.toFixed(2)}</span>
                     </div>
-                `
+                `).join('') || '<p style="font-size: 14px; color: var(--color-text-secondary);">No hay datos</p>';
+        }
+
+        function exportarZIP() {
+            downloadTripZIP(currentTripId);
+        }
+
+        async function downloadTripZIP(tripId) {
+            const tripExpenses = expenses.filter(e => e.tripId === tripId);
+            if (tripExpenses.length === 0) {
+                alert('Este viaje no tiene gastos registrados');
+                return;
+            }
+            
+            const trip = trips.find(t => t.id === tripId);
+            const zip = new JSZip();
+            
+            const headers = ['Viaje', 'Fecha', 'Categoría', 'Monto', 'Moneda', 'Tipo de Cambio', 'Descripción', 'Nombre Archivo'];
+            const rows = tripExpenses.map((e, index) => [
+                trip.name,
+                e.fecha,
+                e.categoria,
+                e.monto,
+                e.moneda,
+                e.tipoCambio || '',
+                e.descripcion || '',
+                e.archivoData ? `recibo_${index + 1}.jpg` : ''
+            ]);
+            
+            let csv = headers.join(',') + '\n';
+            rows.forEach(row => {
+                csv += row.map(field => `"${field}"`).join(',') + '\n';
+            });
+            
+            zip.file('gastos.csv', csv);
+            
+            const photosFolder = zip.folder('recibos');
+            tripExpenses.forEach((expense, index) => {
+                if (expense.archivoData) {
+                    const base64Data = expense.archivoData.split(',')[1];
+                    photosFolder.file(`recibo_${index + 1}.jpg`, base64Data, {base64: true});
+                }
+            });
+            
+            const content = await zip.generateAsync({type: 'blob'});
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = `${trip.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.zip`;
+            link.click();
+        }
+
+        document.getElementById('fecha').valueAsDate = new Date();
+        renderTripList();
+    </script>
+</body>
+</html>
