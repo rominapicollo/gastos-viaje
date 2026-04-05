@@ -133,7 +133,6 @@
         .filters { display: flex; gap: 12px; flex-wrap: wrap; }
         .filters select { width: auto; min-width: 150px; }
         
-        /* NUEVO: Mensajes de notificación en UI */
         .toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 12px; max-width: 400px; }
         .toast { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-md); padding: 12px 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: start; gap: 12px; animation: slideIn 0.3s ease-out; }
         .toast.success { border-left: 4px solid var(--color-text-success); background: var(--color-background-success); }
@@ -146,7 +145,6 @@
         .toast-close { background: none; border: none; cursor: pointer; padding: 0; font-size: 18px; color: var(--color-text-tertiary); }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         
-        /* NUEVO: Loading spinner */
         .spinner-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 3000; }
         .spinner-content { background: var(--color-background-primary); border-radius: var(--border-radius-lg); padding: 2rem; text-align: center; min-width: 200px; }
         .spinner { border: 3px solid var(--color-border-tertiary); border-top: 3px solid var(--color-text-primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
@@ -168,7 +166,6 @@
     </style>
 </head>
 <body>
-    <!-- NUEVO: Contenedor de notificaciones -->
     <div id="toast-container" class="toast-container"></div>
 
     <div class="container">
@@ -482,7 +479,6 @@
         let editingTripId = null;
         let editingExpenseId = null;
 
-        // NUEVO: Sistema de notificaciones mejorado
         const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
 
         function showToast(type, title, message, duration = 4000) {
@@ -537,6 +533,25 @@
                 showToast('error', 'Imagen muy grande', `El archivo pesa ${sizeMB}MB. El máximo permitido es 2MB.`);
                 return false;
             }
+            return true;
+        }
+
+        // NUEVO: Validar que la fecha esté dentro del rango del viaje
+        function validateExpenseDate(expenseDate, tripId) {
+            const trip = trips.find(t => t.id === tripId);
+            if (!trip) return true; // Si no encuentra el viaje, permitir (edge case)
+            
+            const expense = new Date(expenseDate);
+            const start = new Date(trip.startDate);
+            const end = new Date(trip.endDate);
+            
+            if (expense < start || expense > end) {
+                const startFormatted = start.toLocaleDateString('es-ES');
+                const endFormatted = end.toLocaleDateString('es-ES');
+                showToast('error', 'Fecha fuera de rango', `La fecha del gasto debe estar entre ${startFormatted} y ${endFormatted}.`, 6000);
+                return false;
+            }
+            
             return true;
         }
 
@@ -675,7 +690,6 @@
         function handleEditFileSelect(event) {
             const file = event.target.files[0];
             if (file) {
-                // NUEVO: Validar tamaño
                 if (!validateImageSize(file)) {
                     event.target.value = '';
                     return;
@@ -716,6 +730,12 @@
             
             if (!fecha || !categoria || !monto || !moneda) {
                 showToast('error', 'Campos incompletos', 'Por favor completá todos los campos obligatorios.');
+                return;
+            }
+            
+            // NUEVO: Validar fecha del viaje
+            const expense = expenses.find(e => e.id === editingExpenseId);
+            if (!validateExpenseDate(fecha, expense.tripId)) {
                 return;
             }
             
@@ -824,7 +844,6 @@
         function handleFileSelect(event) {
             const file = event.target.files[0];
             if (file) {
-                // NUEVO: Validar tamaño
                 if (!validateImageSize(file)) {
                     event.target.value = '';
                     return;
@@ -865,6 +884,11 @@
             
             if (!fecha || !categoria || !monto || !moneda) {
                 showToast('error', 'Campos incompletos', 'Por favor completá todos los campos obligatorios.');
+                return;
+            }
+            
+            // NUEVO: Validar que la fecha esté dentro del rango del viaje
+            if (!validateExpenseDate(fecha, currentTripId)) {
                 return;
             }
             
@@ -1008,17 +1032,13 @@
                 return;
             }
             
-            // Validación de comprobantes
             const expensesWithoutReceipt = tripExpenses.filter(e => !e.archivoData);
             if (expensesWithoutReceipt.length > 0) {
                 showToast('error', 'Faltan comprobantes', `Hay ${expensesWithoutReceipt.length} gasto(s) sin comprobante. Agregá todos los comprobantes antes de descargar.`, 6000);
                 return;
             }
             
-            // NUEVO: Mostrar loading
             showLoading('Generando archivo ZIP...');
-            
-            // Pequeño delay para que se vea el spinner
             await new Promise(resolve => setTimeout(resolve, 500));
             
             try {
@@ -1067,6 +1087,27 @@
             }
         }
 
+        document.getElementById('fecha').valueAsDate = new Date();
+        renderTripList();
+    </script>
+</body>
+</html>
+```
+
+---
+
+## ✅ **VALIDACIÓN AGREGADA:**
+
+**Nueva función `validateExpenseDate()`** que verifica:
+- La fecha del gasto debe ser >= fecha inicio del viaje
+- La fecha del gasto debe ser <= fecha fin del viaje
+- Si la fecha está fuera de rango, muestra un toast de error con las fechas correctas
+- Se aplica tanto al **crear** como al **editar** gastos
+
+**Ejemplo de mensaje de error:**
+```
+❌ Fecha fuera de rango
+La fecha del gasto debe estar entre 01/03/2026 y 05/03/2026.
         document.getElementById('fecha').valueAsDate = new Date();
         renderTripList();
     </script>
