@@ -78,6 +78,8 @@
         .trip-actions { display: flex; gap: 8px; }
         .btn-download { background: var(--color-background-success); color: var(--color-text-success); border: none; padding: 8px 16px; border-radius: var(--border-radius-md); font-size: 13px; font-weight: 500; cursor: pointer; }
         .btn-download:hover { opacity: 0.9; }
+        .btn-edit { background: var(--color-background-secondary); color: var(--color-text-secondary); border: 0.5px solid var(--color-border-secondary); padding: 8px 16px; border-radius: var(--border-radius-md); font-size: 13px; font-weight: 500; cursor: pointer; }
+        .btn-edit:hover { background: var(--color-background-tertiary); }
         .btn-primary { background: var(--color-text-primary); color: var(--color-background-primary); border: none; padding: 10px 24px; border-radius: var(--border-radius-md); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; width: 100%; }
         .btn-primary:hover { opacity: 0.9; transform: scale(0.98); }
         .btn-secondary { background: transparent; color: var(--color-text-primary); border: 0.5px solid var(--color-border-secondary); padding: 10px 24px; border-radius: var(--border-radius-md); font-size: 14px; font-weight: 500; cursor: pointer; }
@@ -130,7 +132,7 @@
             .header { flex-direction: column; align-items: flex-start; gap: 12px; }
             .trip-card { flex-direction: column; align-items: flex-start; gap: 12px; }
             .trip-actions { width: 100%; }
-            .btn-download { width: 100%; }
+            .btn-download, .btn-edit { width: 100%; }
         }
     </style>
 </head>
@@ -303,7 +305,7 @@
 
     <div id="new-trip-modal" class="modal" style="display: none;">
         <div class="modal-content">
-            <h2>Nuevo viaje</h2>
+            <h2 id="modal-title">Nuevo viaje</h2>
             <div class="form-group">
                 <label>Nombre del viaje</label>
                 <input type="text" id="trip-name" placeholder="Ej: Buenos Aires - Octubre 2024">
@@ -317,8 +319,8 @@
                 <input type="date" id="trip-end">
             </div>
             <div style="display: flex; gap: 12px; margin-top: 1.5rem;">
-                <button class="btn-primary" onclick="createTrip()">Crear viaje</button>
-                <button class="btn-secondary" onclick="hideNewTripModal()">Cancelar</button>
+                <button class="btn-primary" onclick="saveTripModal()" id="save-trip-btn">Crear viaje</button>
+                <button class="btn-secondary" onclick="hideTripModal()">Cancelar</button>
             </div>
         </div>
     </div>
@@ -330,6 +332,7 @@
         let expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
         let currentTripId = null;
         let currentFile = null;
+        let editingTripId = null;
 
         function renderTripList() {
             const container = document.getElementById('trip-list');
@@ -353,6 +356,7 @@
                             <p>${new Date(trip.startDate).toLocaleDateString('es-ES')} - ${new Date(trip.endDate).toLocaleDateString('es-ES')} • ${total} gastos • ${withPhotos} fotos</p>
                         </div>
                         <div class="trip-actions">
+                            <button class="btn-edit" onclick="event.stopPropagation(); showEditTripModal(${trip.id})">Editar</button>
                             <button class="btn-download" onclick="event.stopPropagation(); downloadTripZIP(${trip.id})">Descargar ZIP</button>
                         </div>
                     </div>
@@ -361,17 +365,33 @@
         }
 
         function showNewTripModal() {
-            document.getElementById('new-trip-modal').style.display = 'flex';
-        }
-
-        function hideNewTripModal() {
-            document.getElementById('new-trip-modal').style.display = 'none';
+            editingTripId = null;
+            document.getElementById('modal-title').textContent = 'Nuevo viaje';
+            document.getElementById('save-trip-btn').textContent = 'Crear viaje';
             document.getElementById('trip-name').value = '';
             document.getElementById('trip-start').value = '';
             document.getElementById('trip-end').value = '';
+            document.getElementById('new-trip-modal').style.display = 'flex';
         }
 
-        function createTrip() {
+        function showEditTripModal(tripId) {
+            editingTripId = tripId;
+            const trip = trips.find(t => t.id === tripId);
+            
+            document.getElementById('modal-title').textContent = 'Editar viaje';
+            document.getElementById('save-trip-btn').textContent = 'Guardar cambios';
+            document.getElementById('trip-name').value = trip.name;
+            document.getElementById('trip-start').value = trip.startDate;
+            document.getElementById('trip-end').value = trip.endDate;
+            document.getElementById('new-trip-modal').style.display = 'flex';
+        }
+
+        function hideTripModal() {
+            document.getElementById('new-trip-modal').style.display = 'none';
+            editingTripId = null;
+        }
+
+        function saveTripModal() {
             const name = document.getElementById('trip-name').value;
             const startDate = document.getElementById('trip-start').value;
             const endDate = document.getElementById('trip-end').value;
@@ -381,16 +401,30 @@
                 return;
             }
             
-            const trip = {
-                id: Date.now(),
-                name,
-                startDate,
-                endDate
-            };
+            if (editingTripId) {
+                const tripIndex = trips.findIndex(t => t.id === editingTripId);
+                trips[tripIndex] = {
+                    ...trips[tripIndex],
+                    name,
+                    startDate,
+                    endDate
+                };
+                
+                if (currentTripId === editingTripId) {
+                    document.getElementById('trip-badge').textContent = `📍 ${name}`;
+                }
+            } else {
+                const trip = {
+                    id: Date.now(),
+                    name,
+                    startDate,
+                    endDate
+                };
+                trips.push(trip);
+            }
             
-            trips.push(trip);
             localStorage.setItem('trips', JSON.stringify(trips));
-            hideNewTripModal();
+            hideTripModal();
             renderTripList();
         }
 
