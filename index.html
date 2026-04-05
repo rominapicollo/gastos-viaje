@@ -12,12 +12,14 @@
             --color-background-info: #e6f1fb;
             --color-background-danger: #fcebeb;
             --color-background-success: #eaf3de;
+            --color-background-warning: #fff3cd;
             --color-text-primary: #1a1a1a;
             --color-text-secondary: #666666;
             --color-text-tertiary: #999999;
             --color-text-info: #185fa5;
             --color-text-danger: #a32d2d;
             --color-text-success: #3b6d11;
+            --color-text-warning: #856404;
             --color-border-primary: rgba(0,0,0,0.4);
             --color-border-secondary: rgba(0,0,0,0.3);
             --color-border-tertiary: rgba(0,0,0,0.15);
@@ -34,12 +36,14 @@
                 --color-background-info: #0c447c;
                 --color-background-danger: #791f1f;
                 --color-background-success: #27500a;
+                --color-background-warning: #664d03;
                 --color-text-primary: #f0f0f0;
                 --color-text-secondary: #b0b0b0;
                 --color-text-tertiary: #808080;
                 --color-text-info: #85b7eb;
                 --color-text-danger: #f09595;
                 --color-text-success: #c0dd97;
+                --color-text-warning: #ffecb5;
             }
         }
 
@@ -126,6 +130,7 @@
         .export-section { display: flex; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; }
         .filters { display: flex; gap: 12px; flex-wrap: wrap; }
         .filters select { width: auto; min-width: 150px; }
+        .alert-warning { background: var(--color-background-warning); color: var(--color-text-warning); padding: 12px 16px; border-radius: var(--border-radius-md); margin-bottom: 1rem; font-size: 14px; line-height: 1.5; }
 
         @media (max-width: 768px) {
             .container { padding: 1rem; }
@@ -379,6 +384,25 @@
                 <input type="text" id="edit-descripcion" placeholder="Detalles del gasto...">
             </div>
 
+            <div class="form-group">
+                <label>Comprobante</label>
+                <div class="photo-options">
+                    <div class="photo-btn" onclick="document.getElementById('edit-camera-input').click()">
+                        <input type="file" id="edit-camera-input" accept="image/*" capture="environment" onchange="handleEditFileSelect(event)">
+                        <div class="photo-btn-icon">📷</div>
+                        <p class="photo-btn-text">Tomar foto</p>
+                        <p class="photo-btn-hint">Usar cámara</p>
+                    </div>
+                    <div class="photo-btn" onclick="document.getElementById('edit-file-input').click()">
+                        <input type="file" id="edit-file-input" accept="image/*" onchange="handleEditFileSelect(event)">
+                        <div class="photo-btn-icon">🖼️</div>
+                        <p class="photo-btn-text">Subir foto</p>
+                        <p class="photo-btn-hint">Desde galería</p>
+                    </div>
+                </div>
+                <div id="edit-file-preview" style="display: none;"></div>
+            </div>
+
             <div style="display: flex; gap: 12px; margin-top: 1.5rem;">
                 <button class="btn-primary" onclick="saveEditedExpense()">Guardar cambios</button>
                 <button class="btn-secondary" onclick="hideEditExpenseModal()">Cancelar</button>
@@ -427,6 +451,7 @@
         let expenses = JSON.parse(localStorage.getItem('expenses') || '[]');
         let currentTripId = null;
         let currentFile = null;
+        let currentEditFile = null;
         let editingTripId = null;
         let editingExpenseId = null;
 
@@ -531,12 +556,62 @@
             document.getElementById('edit-tipoCambio').value = expense.tipoCambio || '';
             document.getElementById('edit-descripcion').value = expense.descripcion || '';
             
+            // Mostrar foto existente si hay
+            if (expense.archivoData) {
+                const preview = document.getElementById('edit-file-preview');
+                preview.innerHTML = `
+                    <img src="${expense.archivoData}" alt="Preview">
+                    <div style="flex: 1;">
+                        <p style="margin: 0; font-size: 14px; font-weight: 500;">${expense.archivo || 'Comprobante actual'}</p>
+                        <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--color-text-secondary);">Foto cargada</p>
+                    </div>
+                    <button class="remove-photo" onclick="removeEditPhoto()">×</button>
+                `;
+                preview.style.display = 'flex';
+                currentEditFile = 'EXISTING'; // Marcar que tiene foto existente
+            } else {
+                document.getElementById('edit-file-preview').style.display = 'none';
+                currentEditFile = null;
+            }
+            
             document.getElementById('edit-expense-modal').style.display = 'flex';
         }
 
         function hideEditExpenseModal() {
             document.getElementById('edit-expense-modal').style.display = 'none';
+            document.getElementById('edit-file-preview').style.display = 'none';
+            document.getElementById('edit-camera-input').value = '';
+            document.getElementById('edit-file-input').value = '';
+            currentEditFile = null;
             editingExpenseId = null;
+        }
+
+        function handleEditFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                currentEditFile = file;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('edit-file-preview');
+                    preview.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview">
+                        <div style="flex: 1;">
+                            <p style="margin: 0; font-size: 14px; font-weight: 500;">${file.name}</p>
+                            <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--color-text-secondary);">${(file.size / 1024).toFixed(1)} KB</p>
+                        </div>
+                        <button class="remove-photo" onclick="removeEditPhoto()">×</button>
+                    `;
+                    preview.style.display = 'flex';
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removeEditPhoto() {
+            currentEditFile = null;
+            document.getElementById('edit-file-preview').style.display = 'none';
+            document.getElementById('edit-camera-input').value = '';
+            document.getElementById('edit-file-input').value = '';
         }
 
         function saveEditedExpense() {
@@ -553,8 +628,11 @@
             }
             
             const expenseIndex = expenses.findIndex(e => e.id === editingExpenseId);
+            const oldExpense = expenses[expenseIndex];
+            
+            // Actualizar datos básicos
             expenses[expenseIndex] = {
-                ...expenses[expenseIndex],
+                ...oldExpense,
                 fecha,
                 categoria,
                 monto,
@@ -562,6 +640,18 @@
                 tipoCambio,
                 descripcion
             };
+            
+            // Manejar la foto
+            if (currentEditFile && currentEditFile !== 'EXISTING') {
+                // Nueva foto cargada
+                expenses[expenseIndex].archivo = currentEditFile.name;
+                expenses[expenseIndex].archivoData = document.querySelector('#edit-file-preview img')?.src;
+            } else if (currentEditFile === null) {
+                // Foto eliminada
+                expenses[expenseIndex].archivo = null;
+                expenses[expenseIndex].archivoData = null;
+            }
+            // Si currentEditFile === 'EXISTING', mantener la foto anterior (ya está en oldExpense)
             
             localStorage.setItem('expenses', JSON.stringify(expenses));
             hideEditExpenseModal();
@@ -819,6 +909,13 @@
             const tripExpenses = expenses.filter(e => e.tripId === tripId);
             if (tripExpenses.length === 0) {
                 alert('Este viaje no tiene gastos registrados');
+                return;
+            }
+            
+            // VALIDACIÓN: Verificar que todos los gastos tengan comprobante
+            const expensesWithoutReceipt = tripExpenses.filter(e => !e.archivoData);
+            if (expensesWithoutReceipt.length > 0) {
+                alert(`⚠️ No se puede descargar el ZIP\n\nHay ${expensesWithoutReceipt.length} gasto(s) sin comprobante cargado.\n\nPor favor, agregá los comprobantes faltantes antes de descargar.`);
                 return;
             }
             
