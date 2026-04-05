@@ -1092,24 +1092,4 @@
     </script>
 </body>
 </html>
-```
 
----
-
-## ✅ **VALIDACIÓN AGREGADA:**
-
-**Nueva función `validateExpenseDate()`** que verifica:
-- La fecha del gasto debe ser >= fecha inicio del viaje
-- La fecha del gasto debe ser <= fecha fin del viaje
-- Si la fecha está fuera de rango, muestra un toast de error con las fechas correctas
-- Se aplica tanto al **crear** como al **editar** gastos
-
-**Ejemplo de mensaje de error:**
-```
-❌ Fecha fuera de rango
-La fecha del gasto debe estar entre 01/03/2026 y 05/03/2026.
-        document.getElementById('fecha').valueAsDate = new Date();
-        renderTripList();
-    </script>
-</body>
-</html>
