@@ -327,6 +327,65 @@
         </div>
     </div>
 
+    <div id="edit-expense-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Editar gasto</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Fecha del gasto</label>
+                    <input type="date" id="edit-fecha">
+                </div>
+                <div class="form-group">
+                    <label>Categoría</label>
+                    <select id="edit-categoria">
+                        <option value="">Selecciona una categoría</option>
+                        <option value="Transporte">Transporte</option>
+                        <option value="Alojamiento">Alojamiento</option>
+                        <option value="Comidas">Comidas</option>
+                        <option value="Combustible">Combustible</option>
+                        <option value="Otros">Otros</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row-3">
+                <div class="form-group">
+                    <label>Monto</label>
+                    <input type="number" id="edit-monto" placeholder="0.00" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Moneda</label>
+                    <select id="edit-moneda">
+                        <option value="ARS">ARS</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="BRL">BRL</option>
+                        <option value="CLP">CLP</option>
+                        <option value="UYU">UYU</option>
+                        <option value="MXN">MXN</option>
+                        <option value="COP">COP</option>
+                        <option value="PEN">PEN</option>
+                        <option value="GBP">GBP</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tipo de cambio</label>
+                    <input type="number" id="edit-tipoCambio" placeholder="Opcional" step="0.01">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Descripción</label>
+                <input type="text" id="edit-descripcion" placeholder="Detalles del gasto...">
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 1.5rem;">
+                <button class="btn-primary" onclick="saveEditedExpense()">Guardar cambios</button>
+                <button class="btn-secondary" onclick="hideEditExpenseModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <div id="policy-modal" class="modal" style="display: none;">
         <div class="modal-content">
             <h2>📋 Política de Gastos de AcidLabs</h2>
@@ -369,6 +428,7 @@
         let currentTripId = null;
         let currentFile = null;
         let editingTripId = null;
+        let editingExpenseId = null;
 
         function renderTripList() {
             const container = document.getElementById('trip-list');
@@ -458,6 +518,56 @@
 
         function hidePolicyModal() {
             document.getElementById('policy-modal').style.display = 'none';
+        }
+
+        function showEditExpenseModal(expenseId) {
+            editingExpenseId = expenseId;
+            const expense = expenses.find(e => e.id === expenseId);
+            
+            document.getElementById('edit-fecha').value = expense.fecha;
+            document.getElementById('edit-categoria').value = expense.categoria;
+            document.getElementById('edit-monto').value = expense.monto;
+            document.getElementById('edit-moneda').value = expense.moneda;
+            document.getElementById('edit-tipoCambio').value = expense.tipoCambio || '';
+            document.getElementById('edit-descripcion').value = expense.descripcion || '';
+            
+            document.getElementById('edit-expense-modal').style.display = 'flex';
+        }
+
+        function hideEditExpenseModal() {
+            document.getElementById('edit-expense-modal').style.display = 'none';
+            editingExpenseId = null;
+        }
+
+        function saveEditedExpense() {
+            const fecha = document.getElementById('edit-fecha').value;
+            const categoria = document.getElementById('edit-categoria').value;
+            const monto = parseFloat(document.getElementById('edit-monto').value);
+            const moneda = document.getElementById('edit-moneda').value;
+            const descripcion = document.getElementById('edit-descripcion').value;
+            const tipoCambio = parseFloat(document.getElementById('edit-tipoCambio').value) || null;
+            
+            if (!fecha || !categoria || !monto || !moneda) {
+                alert('Por favor completa todos los campos obligatorios');
+                return;
+            }
+            
+            const expenseIndex = expenses.findIndex(e => e.id === editingExpenseId);
+            expenses[expenseIndex] = {
+                ...expenses[expenseIndex],
+                fecha,
+                categoria,
+                monto,
+                moneda,
+                tipoCambio,
+                descripcion
+            };
+            
+            localStorage.setItem('expenses', JSON.stringify(expenses));
+            hideEditExpenseModal();
+            renderExpenses();
+            renderTripList();
+            alert('Gasto actualizado exitosamente');
         }
 
         function saveTripModal() {
@@ -638,8 +748,9 @@
                         </div>
                     </div>
                     <div class="expense-actions">
-                        ${expense.archivoData ? `<button class="icon-btn" onclick="verArchivo(${expense.id})">📎</button>` : ''}
-                        <button class="icon-btn" onclick="eliminarGasto(${expense.id})">🗑️</button>
+                        ${expense.archivoData ? `<button class="icon-btn" onclick="verArchivo(${expense.id})" title="Ver recibo">📎</button>` : ''}
+                        <button class="icon-btn" onclick="showEditExpenseModal(${expense.id})" title="Editar gasto">✏️</button>
+                        <button class="icon-btn" onclick="eliminarGasto(${expense.id})" title="Eliminar">🗑️</button>
                     </div>
                 </div>
             `).join('');
@@ -697,59 +808,4 @@
                         <span style="font-size: 14px;">${cat}</span>
                         <span style="font-size: 14px; font-weight: 500;">${amount.toFixed(2)}</span>
                     </div>
-                `).join('') || '<p style="font-size: 14px; color: var(--color-text-secondary);">No hay datos</p>';
-        }
-
-        function exportarZIP() {
-            downloadTripZIP(currentTripId);
-        }
-
-        async function downloadTripZIP(tripId) {
-            const tripExpenses = expenses.filter(e => e.tripId === tripId);
-            if (tripExpenses.length === 0) {
-                alert('Este viaje no tiene gastos registrados');
-                return;
-            }
-            
-            const trip = trips.find(t => t.id === tripId);
-            const zip = new JSZip();
-            
-            const headers = ['Viaje', 'Fecha', 'Categoría', 'Monto', 'Moneda', 'Tipo de Cambio', 'Descripción', 'Nombre Archivo'];
-            const rows = tripExpenses.map((e, index) => [
-                trip.name,
-                e.fecha,
-                e.categoria,
-                e.monto,
-                e.moneda,
-                e.tipoCambio || '',
-                e.descripcion || '',
-                e.archivoData ? `recibo_${index + 1}.jpg` : ''
-            ]);
-            
-            let csv = headers.join(',') + '\n';
-            rows.forEach(row => {
-                csv += row.map(field => `"${field}"`).join(',') + '\n';
-            });
-            
-            zip.file('gastos.csv', csv);
-            
-            const photosFolder = zip.folder('recibos');
-            tripExpenses.forEach((expense, index) => {
-                if (expense.archivoData) {
-                    const base64Data = expense.archivoData.split(',')[1];
-                    photosFolder.file(`recibo_${index + 1}.jpg`, base64Data, {base64: true});
-                }
-            });
-            
-            const content = await zip.generateAsync({type: 'blob'});
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(content);
-            link.download = `${trip.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.zip`;
-            link.click();
-        }
-
-        document.getElementById('fecha').valueAsDate = new Date();
-        renderTripList();
-    </script>
-</body>
-</html>
+                `
